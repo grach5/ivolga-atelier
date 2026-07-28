@@ -50,6 +50,16 @@
   --ease: cubic-bezier(.22,.61,.36,1);
   --dur-fast: 160ms;
   --dur-med: 420ms;
+
+  /* Токены для 3D-наклона карточек, параллакса и анимации «крыла» */
+  --perspective-card: 1000px;
+  --perspective-wing: 900px;
+  --tilt-max-deg: 7deg;
+  --tilt-lift: 6px;
+  --tilt-shadow-color: rgba(43, 33, 48, 0.22);
+  --tilt-dur: 260ms;
+  --wing-float-duration: 13s;
+  --wing-parallax-factor: 0.18;
 }
 
 /* -------------------- Reset -------------------- */
@@ -358,15 +368,29 @@ h2.section-title{
   gap: var(--space-xl);
   align-items: center;
 }
-.hero-wing-bg{
+/* Обёртка отвечает за позицию и JS-параллакс (translateY по скроллу);
+   perspective живёт здесь, чтобы 3D-покачивание самого крыла (ниже) выглядело объёмным. */
+.hero-wing-parallax{
   position: absolute;
   top: -8%;
   right: -12%;
   width: min(64vw, 780px);
-  opacity: 0.16;
-  color: var(--color-gold);
   z-index: 1;
   pointer-events: none;
+  perspective: var(--perspective-wing);
+  will-change: transform;
+}
+.hero-wing-bg{
+  opacity: 0.16;
+  color: var(--color-gold);
+  transform-style: preserve-3d;
+  animation: wing-float var(--wing-float-duration) ease-in-out infinite;
+}
+@keyframes wing-float{
+  0%, 100%{ transform: rotateY(0deg) rotateZ(0deg) translateZ(0); }
+  25%{ transform: rotateY(6deg) rotateZ(-2deg) translateZ(14px); }
+  50%{ transform: rotateY(-5deg) rotateZ(2.5deg) translateZ(-8px); }
+  75%{ transform: rotateY(3deg) rotateZ(-1.5deg) translateZ(6px); }
 }
 .hero-badges{
   display: flex;
@@ -473,7 +497,8 @@ h2.section-title{
 @media (max-width: 900px){
   .hero-inner{ grid-template-columns: 1fr; }
   .hero-visual{ order: -1; max-width: 420px; }
-  .hero-wing-bg{ opacity: 0.12; width: 90vw; top: -4%; right: -30%; }
+  .hero-wing-parallax{ width: 90vw; top: -4%; right: -30%; }
+  .hero-wing-bg{ opacity: 0.12; }
 }
 
 /* -------------------- About -------------------- */
@@ -512,12 +537,21 @@ h2.section-title{
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: var(--space-lg);
+  perspective: var(--perspective-card);
 }
 .service-card{
   background: var(--color-surface);
   border: 1px solid var(--color-line);
   border-radius: var(--radius-lg);
   padding: var(--space-lg);
+  transform-style: preserve-3d;
+  transition: transform var(--tilt-dur) var(--ease), box-shadow var(--tilt-dur) var(--ease);
+  will-change: transform;
+}
+/* Пока курсор внутри карточки — наклон обновляется мгновенно (без задержки transition),
+   при уходе курсора transform снова анимируется плавно (см. правило выше). */
+.service-card.is-tilting{
+  transition: box-shadow var(--tilt-dur) var(--ease);
 }
 .service-card-head{
   display: flex;
@@ -934,4 +968,14 @@ h2.section-title{
 
 @media (max-width: 780px){
   .footer-top{ grid-template-columns: 1fr; }
+}
+
+/* -------------------- Reduced motion: полное отключение доп. эффектов --------------------
+   Глобальное правило в начале файла уже гасит длительность анимаций/transition.
+   Здесь — подстраховка, чтобы 3D-наклон, параллакс и покачивание «крыла»
+   не оставляли карточки/крыло в наклонённом состоянии и не совершали никаких сдвигов. */
+@media (prefers-reduced-motion: reduce){
+  .service-card{ transform: none !important; }
+  .hero-wing-parallax{ transform: none !important; }
+  .hero-wing-bg{ animation: none !important; transform: none !important; }
 }

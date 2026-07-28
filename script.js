@@ -8,6 +8,10 @@
   /* ---------- Номер WhatsApp (в международном формате, без +) ---------- */
   var WHATSAPP_NUMBER = "79668683535";
 
+  /* ---------- Уважаем prefers-reduced-motion: полностью отключаем JS-эффекты ---------- */
+  var motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+  var prefersReducedMotion = motionQuery.matches;
+
   /* ---------- Шапка: тень при прокрутке ---------- */
   var header = document.getElementById("siteHeader");
   function onScroll() {
@@ -44,6 +48,69 @@
     document.addEventListener("keydown", function (e) {
       if (e.key === "Escape") closeMobileNav();
     });
+  }
+
+  /* ---------- 3D-наклон карточек услуг при наведении курсора ---------- */
+  if (!prefersReducedMotion) {
+    var tiltCards = document.querySelectorAll(".service-card");
+    var TILT_MAX_DEG = 7; // ограничение по заданию: ±6–8°
+
+    tiltCards.forEach(function (card) {
+      function handleTiltMove(e) {
+        var rect = card.getBoundingClientRect();
+        var relX = (e.clientX - rect.left) / rect.width; // 0..1
+        var relY = (e.clientY - rect.top) / rect.height; // 0..1
+
+        var rotateY = (relX - 0.5) * (TILT_MAX_DEG * 2); // курсор справа → крутим вправо
+        var rotateX = (0.5 - relY) * (TILT_MAX_DEG * 2); // курсор сверху → крутим вверх
+
+        // Мягкое усиление тени в сторону, противоположную наклону — имитация источника света сверху.
+        var shadowX = (relX - 0.5) * -20;
+        var shadowY = (relY - 0.5) * -14;
+
+        card.style.transform =
+          "rotateX(" + rotateX.toFixed(2) + "deg) rotateY(" + rotateY.toFixed(2) + "deg) translateZ(var(--tilt-lift))";
+        card.style.boxShadow =
+          shadowX.toFixed(1) + "px " + (18 - shadowY).toFixed(1) + "px 34px var(--tilt-shadow-color), var(--shadow-sm)";
+      }
+
+      function handleTiltEnter() {
+        card.classList.add("is-tilting");
+      }
+
+      function handleTiltLeave() {
+        card.classList.remove("is-tilting");
+        card.style.transform = "";
+        card.style.boxShadow = "";
+      }
+
+      card.addEventListener("mouseenter", handleTiltEnter);
+      card.addEventListener("mousemove", handleTiltMove);
+      card.addEventListener("mouseleave", handleTiltLeave);
+    });
+  }
+
+  /* ---------- Параллакс фонового «крыла» в hero при скролле ---------- */
+  var heroWingParallax = document.getElementById("heroWingParallax");
+  if (heroWingParallax && !prefersReducedMotion) {
+    var WING_PARALLAX_FACTOR = 0.18;
+    var wingParallaxTicking = false;
+
+    var updateWingParallax = function () {
+      var offset = window.scrollY * WING_PARALLAX_FACTOR;
+      heroWingParallax.style.transform = "translateY(" + offset.toFixed(1) + "px)";
+      wingParallaxTicking = false;
+    };
+
+    var onWingParallaxScroll = function () {
+      if (!wingParallaxTicking) {
+        window.requestAnimationFrame(updateWingParallax);
+        wingParallaxTicking = true;
+      }
+    };
+
+    window.addEventListener("scroll", onWingParallaxScroll, { passive: true });
+    updateWingParallax();
   }
 
   /* ---------- Форма записи → сообщение в WhatsApp ---------- */
